@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="http://xframium.org/xsl/xs3p.xsl"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.xframium.org/deviceRegistry" xmlns:tns="http://www.xframium.org/deviceRegistry" elementFormDefault="qualified">
+	<annotation>
+		<documentation xml:lang="en">
+			xFramium Device Registry Definition
+		</documentation>
+	</annotation>
+
+	<element name="deviceRegistry" type="tns:RegistryRoot" />
+
+	<complexType name="RegistryRoot">
+		<sequence>
+			<element name="device" type="tns:Device" minOccurs="1" maxOccurs="unbounded" />
+			<element name="objectCapability" type="tns:ObjectDeviceCapability" minOccurs="0" maxOccurs="unbounded" />
+		</sequence>
+	</complexType>
+
+	<complexType name="Device">
+		<sequence>
+			<element name="capability" type="tns:DeviceCapability" minOccurs="0" maxOccurs="unbounded" />
+			<element name="objectCapability" type="tns:ObjectDeviceCapability" minOccurs="0" maxOccurs="unbounded" />
+		</sequence>
+		<attribute name="name" type="string" use="required" />
+		<attribute name="manufacturer" type="string" use="required" />
+		<attribute name="model" type="string" use="required" />
+		<attribute name="os" type="string" use="optional" />
+		<attribute name="id" type="string" use="optional" />
+		<attribute name="osVersion" type="string" use="optional" />
+		<attribute name="browserName" type="string" use="optional" />
+		<attribute name="browserVersion" type="string" use="optional" />
+		<attribute name="active" type="boolean" use="optional" default="true" />
+		<attribute name="availableDevices" type="integer" use="optional" default="1" />
+        <attribute name="cloud" type="string" use="optional" />
+        <attribute name="driverType" use="optional">
+			<simpleType>
+				<restriction base="string">
+					<enumeration value="APPIUM" />
+					<enumeration value="WEB" />
+					<enumeration value="PERFECTO" />
+				</restriction>
+			</simpleType>
+		</attribute>
+	</complexType>
+
+	<complexType name="DeviceCapability">
+		<simpleContent>
+			<extension base="string">
+				<attribute name="name" type="string" use="required" />
+				<attribute name="class" default="STRING">
+					<simpleType>
+						<restriction base="string">
+							<enumeration value="BOOLEAN" />
+							<enumeration value="PLATFORM" />
+							<enumeration value="STRING" />
+						</restriction>
+					</simpleType>
+				</attribute>
+			</extension>
+		</simpleContent>
+	</complexType>
+	
+	<!-- ObjectDeviceCapability is required when the Capability Class is Object  -->
+	<complexType name="ObjectDeviceCapability">
+		<sequence>
+			<element name="capabilities" type="tns:Capabilities" minOccurs="0" maxOccurs="unbounded" />
+		</sequence>
+		<attribute name="name" type="string" use="required" />
+	</complexType>
+
+	<complexType name="Capabilities">
+		<sequence>
+			<element name="options" type="tns:Options" minOccurs="0" maxOccurs="unbounded" />
+		</sequence>
+		<attribute name="factoryName" use="required">
+			<simpleType>
+				<restriction base="string">
+					<enumeration value="ChromeOptions" />
+					<enumeration value="FirefoxProfile"/>
+				</restriction>
+			</simpleType>
+		</attribute>
+	</complexType>
+	
+	<complexType name="Options">
+		<simpleContent>
+			<extension base="string">
+				<attribute name="name" type="string" use="required" />
+				<attribute name="key" type="string" use="optional" />
+			</extension>
+		</simpleContent>
+	</complexType>
+</schema>

@@ -1,0 +1,161 @@
+/*******************************************************************************
+ * xFramium
+ *
+ * Copyright 2016 by Moreland Labs, Ltd. (http://www.morelandlabs.com)
+ *
+ * Some open source application is free software: you can redistribute 
+ * it and/or modify it under the terms of the GNU General Public 
+ * License as published by the Free Software Foundation, either 
+ * version 3 of the License, or (at your option) any later version.
+ *  
+ * Some open source application is distributed in the hope that it will 
+ * be useful, but WITHOUT ANY WARRANTY; without even the implied warranty 
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *  
+ * You should have received a copy of the GNU General Public License
+ * along with xFramium.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *******************************************************************************/
+package org.xframium.page.data.provider;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import org.xframium.page.data.DefaultPageData;
+import org.xframium.page.data.PageData;
+import org.xframium.utility.SQLUtil;
+
+
+/**
+ * The Class SQLDataProvider.
+ */
+public class SQLPageDataProvider extends AbstractPageDataProvider
+{
+    //
+    // class data
+    //
+
+    private static final String DEF_QUERY =
+        "SELECT DT.NAME, DT.LOCK_RECORDS, PG.NAME, PG.ACTIVE, AT.NAME, AT.VALUE FROM PAGE_DATA_TYPE DT INNER JOIN PAGE_DATA PG ON PG.TYPE_ID = DT.ID INNER JOIN PAGE_DATA_ATTRS AT ON AT.TYPE_ID = DT.ID AND AT.RECORD_ID = PG.ID";
+
+    private static final String[] STR_ARR = new String[0];
+
+    //
+    // instance data
+    //
+
+    /** The username. */
+    private String username;
+	
+    /** The password. */
+    private String password;
+	
+    /** The JDBC URL. */
+    private String url;
+	
+    /** The driver class name. */
+    private String driver;
+	
+    /** The query. */
+    private String query;
+
+    /**
+     * Instantiates a new SQL data provider.
+     *
+     * @param username the user name
+     * @param password the password
+     * @param url the JDBC URL
+     * @param driver the driver class name
+     */
+    public SQLPageDataProvider( String username, String password, String url, String driver )
+    {
+        this.username = username;
+        this.password = password;
+        this.url = url;
+        this.driver = driver;
+        this.query = DEF_QUERY;
+    }
+
+    /**
+     * Instantiates a new SQL data provider.
+     *
+     * @param username the user name
+     * @param password the password
+     * @param url the JDBC URL
+     * @param driver the driver class name
+     */
+    public SQLPageDataProvider( String username, String password, String url, String driver, String query )
+    {
+        this( username, password, url, driver );
+
+        this.query = (( query != null ) ? query : DEF_QUERY );
+    }
+
+    //
+    // override AbstractPageDataProvider
+    //
+    
+    public void readPageData()
+    {
+        try
+        {
+            Object[][] data = SQLUtil.getResults( username, password, url, driver, query, null );
+            HashSet existingRecordTypes = new HashSet();
+            HashMap existingRecordsByName = new HashMap();
+
+            for( int i = 0; i < data.length; ++i )
+            {
+                String record_type_name = (String) data[i][0];
+                boolean lockRecords = "Y".equals( (String) data[i][1] ) || "1".equals( (String) data[i][1] );
+
+                if ( !existingRecordTypes.contains( record_type_name ))
+                {
+                    addRecordType( record_type_name, lockRecords );
+                    existingRecordTypes.add( record_type_name );
+                }
+
+                String record_name = (String) data[i][2];
+                boolean active = "Y".equals( (String) data[i][3] ) || "1".equals( (String) data[i][3] );
+
+                DefaultPageData currentRecord = (DefaultPageData) existingRecordsByName.get( record_name );
+                if( currentRecord == null )
+                {
+                    currentRecord = new DefaultPageData( record_type_name, record_name, active );
+                    existingRecordsByName.put( record_name, currentRecord );
+                }
+
+                String currentName = (String) data[i][4];
+                String currentValue = (String) data[i][5];
+
+                if ( currentValue.startsWith( PageData.TREE_MARKER ) && currentValue.endsWith( PageData.TREE_MARKER ) )
+                {
+                    //
+                    // This is a reference to another page data table
+                    //
+                    currentRecord.addPageData( currentName );
+                    currentRecord.addValue( currentName + PageData.DEF, currentValue );
+                    currentRecord.setContainsChildren( true );
+                }
+                else
+                {
+                    currentRecord.addValue( currentName, currentValue );
+                }
+            }
+
+            Iterator records = existingRecordsByName.values().iterator();
+            while( records.hasNext() )
+            {
+                DefaultPageData currentRecord = (DefaultPageData) records.next();
+                    
+                addRecord( currentRecord );
+            }
+
+        }
+        catch (Exception e)
+        {
+            log.fatal( "Error reading Excel Element File", e );
+        }
+    }
+}
